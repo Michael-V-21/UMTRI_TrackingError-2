@@ -13,6 +13,8 @@
 #include <vector>
 #include <cstddef>
 #include <fstream>
+#include <string>
+#include <sstream>
 using namespace std;
 
 struct GPSEndpoints
@@ -98,7 +100,34 @@ int main()
     double c = dE / segmentLength;
     double s = dN / segmentLength;
 
+    string line;
+    while (true)
+    {
+        cout << "Enter Lat and Long Set (Press Enter to quit)" << endl;
+        getline(cin, line);
 
+        if (line.empty()) break;
+
+        double lat;
+        double lon;
+
+        istringstream iss(line);
+        if (!(iss >> lat >> lon))
+        {
+            cout << "Invalid input" << endl;
+            continue;
+        }
+
+        double dNorth = (lat - inputGPS.LatS) * dr2 * REarth;
+        double dEast = (lon - inputGPS.LongS) * dr2 * REarth * cl;
+        double dLeftward = (- s * dEast) + (c * dNorth);
+
+        cout << "Y (Leftward offset): " << dLeftward << " meters \n";
+
+    }
+
+    //Previous Example GPS data
+    /*
     //Example time, location and querytime data
     vector<double> gpsTime = { 0.0, 1.0, 2.0, 3.0 };
     vector<double> gpsLat = { 10.0, 20.0, 30.0, 40.0 };
@@ -200,7 +229,7 @@ int main()
 
         sync.dL.push_back(dL);
     }
-    
+    */
 
 }
 
