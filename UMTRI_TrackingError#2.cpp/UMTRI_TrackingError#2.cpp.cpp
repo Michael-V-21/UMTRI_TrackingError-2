@@ -79,7 +79,7 @@ int main()
     double REarth = 6387200.0;
 
     //GPSEndpoint user input (random numbers in this case for example and testing)
-    GPSEndpoints inputGPS = { 50.0, -100.0, 51.0, -101.0 };
+    GPSEndpoints inputGPS = { 38.6159082082639, -89.6422637048284, 38.6158411442181, -89.6386742825292 };
 
     //REarth = GetEarthRadius(GPSEndpoints.LatS);
     //d2r = pi / 180;
@@ -100,6 +100,46 @@ int main()
     double c = dE / segmentLength;
     double s = dN / segmentLength;
 
+    // Calculating Y (Leftward offset) using CSV file data, and exporting the data back to another file.
+    ifstream file("UMTRI-Run2883.csv");
+    if (!file.is_open())
+    {
+        cout << "Error with opening the file" << endl;
+    }
+
+    string line;
+    //int rowNumber = 0;
+
+    while (getline(file, line))
+    {
+        if (line.empty()) continue;
+
+        double lat;
+        double lon;
+        char comma;
+
+        stringstream ss(line);
+        if (!(ss >> lat >> comma >> lon)) {
+            //cout << "Invalid data at row " << rowNumber << endl;
+            continue;
+        }
+
+        double dNorth = (lat - inputGPS.LatS) * dr2 * REarth;
+        double dEast = (lon - inputGPS.LongS) * dr2 * REarth * cl;
+        double dLeftward = (-s * dEast) + (c * dNorth);
+
+        cout << " Y (Leftward offset): " << dLeftward << " meters \n";
+        //rowNumber++;
+
+    }
+
+    file.close();
+
+
+
+
+    // Calculating Y (Leftward offset) using user input Latitude and Longitude Pairs
+    /*
     string line;
     while (true)
     {
@@ -125,6 +165,7 @@ int main()
         cout << "Y (Leftward offset): " << dLeftward << " meters \n";
 
     }
+    */
 
     //Previous Example GPS data
     /*
