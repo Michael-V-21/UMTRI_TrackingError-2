@@ -11,11 +11,21 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
-#include <cstddef>
+//#include <cstddef>
 #include <fstream>
-#include <string>
+//#include <string>
 #include <sstream>
+
 using namespace std;
+//using std::cout;
+//using std::endl;
+//using std::string;
+//using std::vector;
+//using std::ifstream;
+//using std::ofstream;
+//using std::getline;
+//using std::stringstream;
+//using std::fixed;
 
 struct GPSEndpoints
 {
@@ -79,7 +89,7 @@ int main()
     double REarth = 6387200.0;
 
     //GPSEndpoint user input (random numbers in this case for example and testing)
-    GPSEndpoints inputGPS = { 38.6159082082639, -89.6422637048284, 38.6158411442181, -89.6386742825292 };
+    GPSEndpoints inputGPS = { 38.61588713646 , -89.6411505279, 38.6158543641, -89.63930307397 };
 
     //REarth = GetEarthRadius(GPSEndpoints.LatS);
     //d2r = pi / 180;
@@ -111,13 +121,14 @@ int main()
 
     out << "Latitude, Longitude, Y (Leftward Offset \n";
     string line;
+    
+    bool firstLine = true;
 
     while (getline(file, line))
     {
         if (line.empty()) continue;
 
-        double lat;
-        double lon;
+        double lat, lon;
         char comma;
 
         stringstream ss(line);
@@ -125,6 +136,13 @@ int main()
         if (!(ss >> lat >> comma >> lon)) {
             //cout << "Invalid data at row " << rowNumber << endl;
             continue;
+        }
+
+        if (firstLine) {
+            cout << fixed;
+            cout << "First CSV lat,lon: " << lat << ", " << lon << endl;
+            cout << "Input start LatS,LongS: " << inputGPS.LatS << ", " << inputGPS.LongS << endl;
+            firstLine = false;
         }
 
         double dNorth = (lat - inputGPS.LatS) * dr2 * REarth;
@@ -139,6 +157,7 @@ int main()
     file.close();
     out.close();
     cout << "Latitude + Longitude + Resulting Y were sent to UMTRI-Run2883-YResults.csv \n";
+
 
 
 
