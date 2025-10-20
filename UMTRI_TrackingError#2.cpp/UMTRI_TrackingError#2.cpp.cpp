@@ -11,21 +11,22 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
-//#include <cstddef>
+#include <cstddef>
 #include <fstream>
-//#include <string>
+#include <string>
 #include <sstream>
+#include <iomanip>
 
 using namespace std;
-//using std::cout;
-//using std::endl;
-//using std::string;
-//using std::vector;
-//using std::ifstream;
-//using std::ofstream;
-//using std::getline;
-//using std::stringstream;
-//using std::fixed;
+using std::cout;
+using std::endl;
+using std::string;
+using std::vector;
+using std::ifstream;
+using std::ofstream;
+using std::getline;
+using std::stringstream;
+using std::fixed;
 
 struct GPSEndpoints
 {
@@ -84,6 +85,7 @@ struct INS
 
 int main()
 {
+    cout << fixed << setprecision(15);
 
     // Earth radius: should use latitiude but use defined measurement for now. 
     double REarth = 6387200.0;
@@ -111,8 +113,8 @@ int main()
     double s = dN / segmentLength;
 
     // Calculating Y (Leftward offset) using CSV file data, and exporting the data back to another file.
-    ifstream file("UMTRI-Run2883.csv");
-    ofstream out("UMTRI-Run2883-YResults.csv");
+    ifstream file("UMTRI-Run2883.txt");
+    ofstream out("UMTRI-Run2883-YResults.txt");
 
     if (!file.is_open() || !out.is_open())
     {
@@ -129,18 +131,18 @@ int main()
         if (line.empty()) continue;
 
         double lat, lon;
-        char comma;
+        //char comma;
+        
 
         stringstream ss(line);
 
-        if (!(ss >> lat >> comma >> lon)) {
+        if (!(ss >> lat >> lon)) {
             //cout << "Invalid data at row " << rowNumber << endl;
             continue;
         }
 
         if (firstLine) {
-            cout << fixed;
-            cout << "First CSV lat,lon: " << lat << ", " << lon << endl;
+            cout <<  "First CSV lat,lon: " << lat << ", " << lon << endl;
             cout << "Input start LatS,LongS: " << inputGPS.LatS << ", " << inputGPS.LongS << endl;
             firstLine = false;
         }
@@ -156,7 +158,7 @@ int main()
 
     file.close();
     out.close();
-    cout << "Latitude + Longitude + Resulting Y were sent to UMTRI-Run2883-YResults.csv \n";
+    cout << "Latitude + Longitude + Resulting Y were sent to UMTRI-Run2883-YResults.txt \n";
 
 
 
