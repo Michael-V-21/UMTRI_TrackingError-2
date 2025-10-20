@@ -102,13 +102,15 @@ int main()
 
     // Calculating Y (Leftward offset) using CSV file data, and exporting the data back to another file.
     ifstream file("UMTRI-Run2883.csv");
-    if (!file.is_open())
+    ofstream out("UMTRI-Run2883-YResults.csv");
+
+    if (!file.is_open() || !out.is_open())
     {
         cout << "Error with opening the file" << endl;
     }
 
+    out << "Latitude, Longitude, Y (Leftward Offset \n";
     string line;
-    //int rowNumber = 0;
 
     while (getline(file, line))
     {
@@ -119,6 +121,7 @@ int main()
         char comma;
 
         stringstream ss(line);
+
         if (!(ss >> lat >> comma >> lon)) {
             //cout << "Invalid data at row " << rowNumber << endl;
             continue;
@@ -128,12 +131,14 @@ int main()
         double dEast = (lon - inputGPS.LongS) * dr2 * REarth * cl;
         double dLeftward = (-s * dEast) + (c * dNorth);
 
-        cout << " Y (Leftward offset): " << dLeftward << " meters \n";
-        //rowNumber++;
+        //cout << " Lat: " << lat << " Lon: " << lon << "   |   Y (Leftward offset) : " << dLeftward << " meters \n";
+        out << lat << ", " << lon << ", " << dLeftward << endl;
 
     }
 
     file.close();
+    out.close();
+    cout << "Latitude + Longitude + Resulting Y were sent to UMTRI-Run2883-YResults.csv \n";
 
 
 
