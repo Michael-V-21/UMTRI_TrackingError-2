@@ -31,9 +31,9 @@ using std::fixed;
 struct GPSEndpoints
 {
     double LatS;
+    double LongS;
     double LatE;
     double LongE;
-    double LongS;
 };
 
 // Get Latitude and Longitude into Sync.
@@ -85,13 +85,13 @@ struct INS
 
 int main()
 {
-    cout << fixed << setprecision(15);
+    cout << fixed << setprecision(13);
 
     // Earth radius: should use latitiude but use defined measurement for now. 
     double REarth = 6387200.0;
 
     //GPSEndpoint user input (random numbers in this case for example and testing)
-    GPSEndpoints inputGPS = { 38.61588713646 , -89.6411505279, 38.6158543641, -89.63930307397 };
+    GPSEndpoints inputGPS = { 38.6159082082639 , -89.6422637048284, 38.6158411442181, -89.6386742825292 };
 
     //REarth = GetEarthRadius(GPSEndpoints.LatS);
     //d2r = pi / 180;
@@ -113,8 +113,8 @@ int main()
     double s = dN / segmentLength;
 
     // Calculating Y (Leftward offset) using CSV file data, and exporting the data back to another file.
-    ifstream file("UMTRI-Run2883.txt");
-    ofstream out("UMTRI-Run2883-YResults.txt");
+    ifstream file("UMTRI-Run2912.csv");
+    ofstream out("UMTRI-Run2912-YResults.csv");
 
     if (!file.is_open() || !out.is_open())
     {
@@ -131,12 +131,12 @@ int main()
         if (line.empty()) continue;
 
         double lat, lon;
-        //char comma;
+        char comma;
         
 
         stringstream ss(line);
 
-        if (!(ss >> lat >> lon)) {
+        if (!(ss >> lat >> comma >> lon)) {
             //cout << "Invalid data at row " << rowNumber << endl;
             continue;
         }
@@ -158,7 +158,7 @@ int main()
 
     file.close();
     out.close();
-    cout << "Latitude + Longitude + Resulting Y were sent to UMTRI-Run2883-YResults.txt \n";
+    cout << "Latitude + Longitude + Resulting Y were sent to UMTRI-Run2912-YResults.csv \n";
 
 
 
