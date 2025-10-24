@@ -113,15 +113,15 @@ int main()
     double s = dN / segmentLength;
 
     // Calculating Y (Leftward offset) using CSV file data, and exporting the data back to another file.
-    ifstream file("UMTRI-Run2912.csv");
-    ofstream out("UMTRI-Run2912-YResults.csv");
+    ifstream file("UMTRI-RUN2883-time,insrol,lat,long,time.csv");
+    ofstream out("UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv");
 
     if (!file.is_open() || !out.is_open())
     {
         cout << "Error with opening the file" << endl;
     }
 
-    out << "Latitude, Longitude, Y (Leftward Offset \n";
+    out << "i.time, i.insroll, g.Latitude, g.Longitude, g.time, Y_LeftwardOffset \n";
     string line;
     
     bool firstLine = true;
@@ -130,35 +130,42 @@ int main()
     {
         if (line.empty()) continue;
 
-        double lat, lon;
+        //stringstream ss(line);
+        double iTime, iInsRoll, gLat, gLon, gTime;
         char comma;
         
 
         stringstream ss(line);
 
-        if (!(ss >> lat >> comma >> lon)) {
-            //cout << "Invalid data at row " << rowNumber << endl;
+        if (!(ss >> iTime >> comma >> iInsRoll >> comma >> gLat >> comma >> gLon >> comma >> gTime)) {
+            cout << "Skipping invalid row: " << line << endl;
             continue;
         }
 
         if (firstLine) {
-            cout <<  "First CSV lat,lon: " << lat << ", " << lon << endl;
-            cout << "Input start LatS,LongS: " << inputGPS.LatS << ", " << inputGPS.LongS << endl;
+            cout << "First CSV Lat/Lon: " << gLat << ", " << gLon << endl;
             firstLine = false;
         }
 
-        double dNorth = (lat - inputGPS.LatS) * dr2 * REarth;
-        double dEast = (lon - inputGPS.LongS) * dr2 * REarth * cl;
+        double dNorth = (gLat - inputGPS.LatS) * dr2 * REarth;
+        double dEast = (gLon - inputGPS.LongS) * dr2 * REarth * cl;
         double dLeftward = (-s * dEast) + (c * dNorth);
 
         //cout << " Lat: " << lat << " Lon: " << lon << "   |   Y (Leftward offset) : " << dLeftward << " meters \n";
-        out << lat << ", " << lon << ", " << dLeftward << endl;
+        //out << lat << ", " << lon << ", " << dLeftward << endl;
+        out << fixed << setprecision(13)
+            << iTime << ", "
+            << iInsRoll << ", "
+            << gLat << ", "
+            << gLon << ", "
+            << gTime << ", "
+            << dLeftward << endl;
 
     }
 
     file.close();
     out.close();
-    cout << "Latitude + Longitude + Resulting Y were sent to UMTRI-Run2912-YResults.csv \n";
+    cout << "Y offset results saved to UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv \n";
 
 
 
