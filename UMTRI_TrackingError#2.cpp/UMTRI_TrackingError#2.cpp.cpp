@@ -121,20 +121,23 @@ int main()
         cout << "Error with opening the file" << endl;
     }
 
-    out << "i.time, i.insroll, g.Latitude, g.Longitude, g.time, Y_LeftwardOffset \n";
+    // CSV headers
+    out << "i.time, i.insroll, g.Latitude, g.Longitude, g.time, Y_LeftwardOffset, , Distance \n";
     string line;
     
     bool firstLine = true;
+    bool hasPrev = false;
+    double prevLat = 0.0;
+    double prevLong = 0.0;
+    double totalDistance = 0.0;
 
     while (getline(file, line))
     {
         if (line.empty()) continue;
 
-        //stringstream ss(line);
         double iTime, iInsRoll, gLat, gLon, gTime;
         char comma;
         
-
         stringstream ss(line);
 
         if (!(ss >> iTime >> comma >> iInsRoll >> comma >> gLat >> comma >> gLon >> comma >> gTime)) {
@@ -151,6 +154,36 @@ int main()
         double dEast = (gLon - inputGPS.LongS) * dr2 * REarth * cl;
         double dLeftward = (-s * dEast) + (c * dNorth);
 
+        double distance = 0.0;
+        if (hasPrev) {
+            // Convert degrees to radians
+            double lat1 = prevLat * dr2;
+            double lon1 = prevLong * dr2;
+            double lat2 = gLat * dr2;
+            double lon2 = gLon * dr2;
+
+            // Haversine formula
+            double dLat = lat2 - lat1;
+            double dLon = lon2 - lon1;
+
+            double a = sin(dLat / 2) * sin(dLat / 2) +
+                cos(lat1) * cos(lat2) *
+                sin(dLon / 2) * sin(dLon / 2);
+            double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+            distance = REarth * c; // meters
+            totalDistance += distance;
+
+        }
+        else {
+            totalDistance = 0.0; // first line has no previous point
+            hasPrev = true;
+        }
+
+        // Update previous point for next loop iteration
+        prevLat = gLat;
+        prevLong = gLon;
+
         //cout << " Lat: " << lat << " Lon: " << lon << "   |   Y (Leftward offset) : " << dLeftward << " meters \n";
         //out << lat << ", " << lon << ", " << dLeftward << endl;
         out << fixed << setprecision(13)
@@ -159,7 +192,10 @@ int main()
             << gLat << ", "
             << gLon << ", "
             << gTime << ", "
-            << dLeftward << endl;
+            << dLeftward << ", "
+            << "      " << ", "
+            << totalDistance
+            << endl;
 
     }
 
