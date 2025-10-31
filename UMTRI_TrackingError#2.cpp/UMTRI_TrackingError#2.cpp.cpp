@@ -103,7 +103,7 @@ int main()
 
     double pi = M_PI;
     const double dr2 = pi / 180.0;
-    
+
 
     double cl = cos(inputGPS.LatS * dr2);
     double dN = (inputGPS.LatE - inputGPS.LatS) * dr2 * REarth;
@@ -122,9 +122,9 @@ int main()
     }
 
     // CSV headers
-    out << "i.time, i.insroll, g.Latitude, g.Longitude, g.time, Y_LeftwardOffset, , Distance \n";
+    out << "Time,INSRoll,Latitude,Longitude,dLeftward, ,dForward, dL\n";
     string line;
-    
+
     bool firstLine = true;
     bool hasPrev = false;
     double prevLat = 0.0;
@@ -135,12 +135,13 @@ int main()
     {
         if (line.empty()) continue;
 
-        double iTime, iInsRoll, gLat, gLon, gTime;
+        double iTime, iInsRoll, gLat, gLon;
         char comma;
-        
+        string cell;
+
         stringstream ss(line);
 
-        if (!(ss >> iTime >> comma >> iInsRoll >> comma >> gLat >> comma >> gLon >> comma >> gTime)) {
+        if (!(ss >> iTime >> comma >> gLat >> comma >> gLon >> comma >> iInsRoll )) {
             cout << "Skipping invalid row: " << line << endl;
             continue;
         }
@@ -151,9 +152,30 @@ int main()
         }
 
         double dNorth = (gLat - inputGPS.LatS) * dr2 * REarth;
-        double dEast = (gLon - inputGPS.LongS) * dr2 * REarth * cl;
-        double dLeftward = (-s * dEast) + (c * dNorth);
 
+        //double cl_current = cos(gLat * dr2);
+        double dEast = (gLon - inputGPS.LongS) * dr2 * REarth * cl;
+
+        double dLeftward = (-s * dEast) + (c * dNorth);
+        double dForward = c * dEast + s * dNorth;
+
+        //static const double dForwardStart = -96.02691236;
+        //dForward += dForwardStart;
+
+        //static const double dLeftwardStart = 0.1461333714;
+        //dLeftward += dLeftwardStart;
+
+
+        // Profiler geometry
+        double Lz = 1.0;
+        double Ly = 0.5;
+        double rollRad = iInsRoll * dr2;
+        double dL = dLeftward - Lz * sin(rollRad) + Ly * cos(rollRad);
+
+        static const double dLStart = -0.4397389183;
+        dL += dLStart;
+
+        /*
         double distance = 0.0;
         if (hasPrev) {
             // Convert degrees to radians
@@ -162,7 +184,6 @@ int main()
             double lat2 = gLat * dr2;
             double lon2 = gLon * dr2;
 
-            // Haversine formula
             double dLat = lat2 - lat1;
             double dLon = lon2 - lon1;
 
@@ -179,10 +200,12 @@ int main()
             totalDistance = 0.0; // first line has no previous point
             hasPrev = true;
         }
+        
 
         // Update previous point for next loop iteration
         prevLat = gLat;
         prevLong = gLon;
+        */
 
         //cout << " Lat: " << lat << " Lon: " << lon << "   |   Y (Leftward offset) : " << dLeftward << " meters \n";
         //out << lat << ", " << lon << ", " << dLeftward << endl;
@@ -191,10 +214,10 @@ int main()
             << iInsRoll << ", "
             << gLat << ", "
             << gLon << ", "
-            << gTime << ", "
             << dLeftward << ", "
             << "      " << ", "
-            << totalDistance
+            << dForward << ", "
+            << dL
             << endl;
 
     }
