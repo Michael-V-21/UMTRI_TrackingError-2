@@ -159,8 +159,8 @@ int main()
         double dLeftward = (-s * dEast) + (c * dNorth);
         double dForward = c * dEast + s * dNorth;
 
-        //static const double dForwardStart = -96.02691236;
-        //dForward += dForwardStart;
+        static const double dForwardStart = -96.02691236;
+        dForward += dForwardStart;
 
         //static const double dLeftwardStart = 0.1461333714;
         //dLeftward += dLeftwardStart;
