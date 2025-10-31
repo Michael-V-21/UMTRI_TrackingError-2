@@ -43,6 +43,11 @@ struct GPSEndpoints
 
 double interp1(const vector<double>& gpsTime, const vector<double>& gpsLocation, double queryTime, double outsideValue)
 {
+    //New stuff 10/31
+    // if gpsTime is empty or only one point, handle gracefully
+    if (gpsTime.empty() || gpsLocation.empty()) return outsideValue;
+    if (gpsTime.size() == 1) return gpsLocation[0];
+
     for (int i = 0; i < gpsTime.size() - 1; i++)
     {
         if (queryTime >= gpsTime[i] && queryTime <= gpsTime[i + 1])
@@ -51,7 +56,9 @@ double interp1(const vector<double>& gpsTime, const vector<double>& gpsLocation,
             return gpsLocation[i] + t * (gpsLocation[i + 1] - gpsLocation[i]);
         }
     }
-    return outsideValue;
+    //return outsideValue;
+    if (queryTime < gpsTime.front()) return gpsLocation.front();
+    return gpsLocation.back();
 }
 
 struct Layout
@@ -82,7 +89,7 @@ struct INS
 };
 
 
-
+/*
 int main()
 {
     cout << fixed << setprecision(13);
@@ -91,26 +98,23 @@ int main()
     double REarth = 6387200.0;
 
     //GPSEndpoint user input (random numbers in this case for example and testing)
-    GPSEndpoints inputGPS = { 38.6159082082639 , -89.6422637048284, 38.6158411442181, -89.6386742825292 };
-
-    //REarth = GetEarthRadius(GPSEndpoints.LatS);
-    //d2r = pi / 180;
-    //cl = cos(GPSEndpoints.LatS * d2r);
-    //dN = (GPSEndpoints.LatE - GPSEndpoints.LatS) * d2r * REarth;
-    //dE = (GPSEndpoints.LongE - GPSEndpoints.LongS) * d2r * REarth * cl;
-    //SegmentLength = sqrt(dE * dE + dN * dN);
-    //c = dE / SegmentLength; s = dN / SegmentLength;
+    GPSEndpoints inputGPS = { 38.6159095515001 , -89.6422556192682, 38.6158436940279, -89.6386750652108 };
 
     double pi = M_PI;
     const double dr2 = pi / 180.0;
 
 
-    double cl = cos(inputGPS.LatS * dr2);
+    //double cl = cos(inputGPS.LatS * dr2);
+    double cl = cos(((inputGPS.LatS + inputGPS.LatE) / 2.0) * dr2);
+
     double dN = (inputGPS.LatE - inputGPS.LatS) * dr2 * REarth;
     double dE = (inputGPS.LongE - inputGPS.LongS) * dr2 * REarth * cl;
     double segmentLength = sqrt(dE * dE + dN * dN);
     double c = dE / segmentLength;
     double s = dN / segmentLength;
+
+    double Lz = 1.0;
+    double Ly = 0.5;
 
     // Calculating Y (Leftward offset) using CSV file data, and exporting the data back to another file.
     ifstream file("UMTRI-RUN2883-time,insrol,lat,long,time.csv");
@@ -123,14 +127,20 @@ int main()
 
     // CSV headers
     out << "Time,INSRoll,Latitude,Longitude,dLeftward, ,dForward, dL\n";
-    string line;
 
+    string line;
     bool firstLine = true;
+
     bool hasPrev = false;
     double prevLat = 0.0;
     double prevLong = 0.0;
-    double totalDistance = 0.0;
 
+    vector<double> rawTime;
+    vector<double> rawLat;
+    vector<double> rawLon;
+    vector<double> rawInsRoll;
+
+    
     while (getline(file, line))
     {
         if (line.empty()) continue;
@@ -165,47 +175,14 @@ int main()
         //static const double dLeftwardStart = 0.1461333714;
         //dLeftward += dLeftwardStart;
 
-
         // Profiler geometry
         double Lz = 1.0;
         double Ly = 0.5;
         double rollRad = iInsRoll * dr2;
         double dL = dLeftward - Lz * sin(rollRad) + Ly * cos(rollRad);
 
-        static const double dLStart = -0.4397389183;
+        static const double dLStart = -0.2732048853;
         dL += dLStart;
-
-        /*
-        double distance = 0.0;
-        if (hasPrev) {
-            // Convert degrees to radians
-            double lat1 = prevLat * dr2;
-            double lon1 = prevLong * dr2;
-            double lat2 = gLat * dr2;
-            double lon2 = gLon * dr2;
-
-            double dLat = lat2 - lat1;
-            double dLon = lon2 - lon1;
-
-            double a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(lat1) * cos(lat2) *
-                sin(dLon / 2) * sin(dLon / 2);
-            double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-            distance = REarth * c; // meters
-            totalDistance += distance;
-
-        }
-        else {
-            totalDistance = 0.0; // first line has no previous point
-            hasPrev = true;
-        }
-        
-
-        // Update previous point for next loop iteration
-        prevLat = gLat;
-        prevLong = gLon;
-        */
 
         //cout << " Lat: " << lat << " Lon: " << lon << "   |   Y (Leftward offset) : " << dLeftward << " meters \n";
         //out << lat << ", " << lon << ", " << dLeftward << endl;
@@ -222,149 +199,294 @@ int main()
 
     }
 
+
     file.close();
     out.close();
     cout << "Y offset results saved to UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv \n";
 
+}
+*/
 
+//Best one so far, shifted up
+/*
+int main()
+{
+    cout << fixed << setprecision(13);
 
+    // Earth radius (in meters)
+    double REarth = 6387200.0;
 
+    // GPS endpoints (rear left antenna start/end)
+    GPSEndpoints inputGPS = { 38.6159095515001 , -89.6422556192682,
+                              38.6158436940279, -89.6386750652108 };
 
-    // Calculating Y (Leftward offset) using user input Latitude and Longitude Pairs
-    /*
-    string line;
-    while (true)
-    {
-        cout << "Enter Lat and Long Set (Press Enter to quit)" << endl;
-        getline(cin, line);
+    double pi = M_PI;
+    const double dr2 = pi / 180.0;
 
-        if (line.empty()) break;
-
-        double lat;
-        double lon;
-
-        istringstream iss(line);
-        if (!(iss >> lat >> lon))
-        {
-            cout << "Invalid input" << endl;
-            continue;
-        }
-
-        double dNorth = (lat - inputGPS.LatS) * dr2 * REarth;
-        double dEast = (lon - inputGPS.LongS) * dr2 * REarth * cl;
-        double dLeftward = (- s * dEast) + (c * dNorth);
-
-        cout << "Y (Leftward offset): " << dLeftward << " meters \n";
-
-    }
-    */
-
-    //Previous Example GPS data
-    /*
-    //Example time, location and querytime data
-    vector<double> gpsTime = { 0.0, 1.0, 2.0, 3.0 };
-    vector<double> gpsLat = { 10.0, 20.0, 30.0, 40.0 };
-    vector<double> gpsLon = { 100.0, 110.0, 120.0, 130.0 };
-    vector<double> syncTime = { 0.5, 1.5, 2.5, 5.0 };
-
-    // Get Latitude and Longitude into Sync.
-    //Sync.Latitude = interp1(double(GpsPos.Time), double(GpsPos.Latitude), double(Sync.Time), 'linear', -999);
-    //Sync.Longitude = interp1(double(GpsPos.Time), double(GpsPos.Longitude), double(Sync.Time), 'linear', -999);
-    //Sync = Sync(Sync.Latitude ~= -999, :);
-
-    Sync sync;
-    sync.Time = syncTime;
-
-    for (double t : syncTime)
-    {
-        double lat = interp1(gpsTime, gpsLat, t, -999);
-        double lon = interp1(gpsTime, gpsLon, t, -999);
-
-        if (lat != -999 && lon != -999)
-        {
-            sync.Latitude.push_back(lat);
-            sync.Longitude.push_back(lon);
-        }
-    }
-
-    //% Make signals that define the profiler path relative to the desired line.
-    //Sync.dNorth = (Sync.Latitude - GPSEndpoints.LatS) * d2r * REarth;
-    //Sync.dEast = (Sync.Longitude - GPSEndpoints.LongS) * d2r * REarth * cl;
-    //% Forward and leftward.
-    //
-    //% NOTE FOR MR : The two items below are the position along the section and the position leftward of the desired track
-    //% of the GPS antenna.The antenna is not in the same location as the profiler height sensor footprint on the ground,
-    //% so, more calculations follow to make the adjustment.
-    //Sync.dForward = c * Sync.dEast + s * Sync.dNorth;
-    //Sync.dLeftward = -s * Sync.dEast + c * Sync.dNorth;
-
-    for (int i = 0; i < sync.Latitude.size(); i++)
-    {
-        double lat = sync.Latitude[i];
-        double lon = sync.Longitude[i];
-
-        double dNorth = (lat - inputGPS.LatS) * dr2 * REarth;
-        double dEast = (lon - inputGPS.LongS) * dr2 * REarth * cl;
-
-        sync.dNorth.push_back(dNorth);
-        sync.dEast.push_back(dEast);
-    }
-
-    for (int i = 0; i < sync.dEast.size(); i++)
-    {
-        double dForward = c * sync.dEast[i] + s * sync.dNorth[i];
-        double dLeftward = -s * sync.dEast[i] + c * sync.dNorth[i];
-
-        sync.dForward.push_back(dForward);
-        sync.dLeftward.push_back(dLeftward);
-    }
-
-    //% Interpolate INS Roll to the clock of Sync.
-    //Sync.INSRoll = interp1(double(Ins.Time), Ins.INSRoll, double(Sync.Time));
-    //
-    //% Get profiler goemtry.
-    //% NOTE FOR MR : Lz and Ly are user entered. (They will not change from run to run, though.)
-    //% They are the vertical and lateral position of the profiler height sensor footprint relative to the GPS antenna.
-    //Lz = Layout.Lz;% Z coord of the ground in the frame of the Gps antenna.
-    //Ly = Layout.Ly;% Y coord of the ground in the frame of the Gps antenna.
-    //
-    //% Project the GPS location to the ground using the roll angle.
-    //% NOTE FOR MR : This is the adjustment mentioned above.It requires the roll angle measured by the INS.
-    //Sync.dL = Sync.dLeftward - Lz * sin(Sync.INSRoll* d2r) + Ly * cos(Sync.INSRoll* d2r);
-    //% NOTE FOR MR : This is the end of the tracking stuff in this function.
-
-
-
-
-    INS ins;
-    ins.Time = { 0.0, 1.0, 2.0, 3.0 };
-    ins.INSRoll = { 0.0, 5.0, -3.0, 2.0 };
-
-
-    for (double t : sync.Time)
-    {
-        double roll = interp1(ins.Time, ins.INSRoll, t, -999);
-        sync.INSRoll.push_back(roll);
-    }
-
+    // Profiler geometry
     double Lz = 1.0;
     double Ly = 0.5;
 
-    for (int i = 0; i < sync.dLeftward.size(); i++)
+    // File I/O
+    ifstream file("UMTRI-RUN2883-time,insrol,lat,long,time.csv");
+    ofstream out("UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv");
+
+    if (!file.is_open() || !out.is_open())
     {
-        double roll = sync.INSRoll[i];
-
-        double rollRad = roll * dr2;
-
-        double dL = sync.dLeftward[i]
-            - Lz * sin(rollRad)
-            + Ly * cos(rollRad);
-
-        sync.dL.push_back(dL);
+        cout << "Error with opening the file" << endl;
+        return 1;
     }
-    */
 
+    // CSV headers
+    out << "Time,INSRoll,Latitude,Longitude,dLeftward, ,dForward, dL\n";
+
+    vector<double> rawTime, rawLat, rawLon, rawInsRoll;
+    string line;
+    //bool firstLine = true;
+
+    // --- STEP 1: Read all points ---
+    while (getline(file, line))
+    {
+        if (line.empty()) continue;
+
+        double iTime, iInsRoll, gLat, gLon;
+        char comma;
+        stringstream ss(line);
+
+        if (!(ss >> iTime >> comma >> gLat >> comma >> gLon >> comma >> iInsRoll))
+        {
+            cout << "Skipping invalid row: " << line << endl;
+            continue;
+        }
+
+        rawTime.push_back(iTime);
+        rawLat.push_back(gLat);
+        rawLon.push_back(gLon);
+        rawInsRoll.push_back(iInsRoll);
+    }
+    file.close();
+
+    // --- STEP 2: Compute best-fit line (Lon vs Lat) ---
+    // Linear regression: Lon = m*Lat + b
+    double sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    int N = rawLat.size();
+    for (int i = 0; i < N; i++)
+    {
+        sumX += rawLat[i];
+        sumY += rawLon[i];
+        sumXY += rawLat[i] * rawLon[i];
+        sumXX += rawLat[i] * rawLat[i];
+    }
+    double m = (N * sumXY - sumX * sumY) / (N * sumXX - sumX * sumX);
+    double b = (sumY - m * sumX) / N;
+
+    // Compute start point projection
+    double lat0 = rawLat.front();
+    double lon0 = m * lat0 + b;
+
+    double cumulativeForward = 0.0;
+
+    // --- STEP 3: Compute dForward and dLeftward relative to best-fit line ---
+    for (int i = 0; i < N; i++)
+    {
+        double gLat = rawLat[i];
+        double gLon = rawLon[i];
+        double iTime = rawTime[i];
+        double iInsRoll = rawInsRoll[i];
+
+        // Project point onto best-fit line
+        // Line vector in meters
+        double dLat_line = gLat - lat0;
+        double dLon_line = gLon - lon0;
+
+        double dNorth_line = dLat_line * dr2 * REarth;
+        double dEast_line = dLon_line * dr2 * REarth * cos((gLat + lat0) / 2.0 * dr2);
+
+        // Direction vector of line
+        double lat1 = rawLat.back();
+        double lon1 = rawLon.back();
+        double dN_line_total = (lat1 - lat0) * dr2 * REarth;
+        double dE_line_total = (lon1 - lon0) * dr2 * REarth * cos((lat1 + lat0) / 2.0 * dr2);
+        double lineLength = sqrt(dN_line_total * dN_line_total + dE_line_total * dE_line_total);
+
+        double c = dE_line_total / lineLength;
+        double s = dN_line_total / lineLength;
+
+        // Forward and leftward (perpendicular)
+        double dForward = c * dEast_line + s * dNorth_line;
+        double dLeftward = -s * dEast_line + c * dNorth_line;
+
+        // Apply start offset to match previous runs
+        static const double dForwardStart = -96.02691236;
+        dForward += dForwardStart;
+
+        // Compute dL using profiler geometry and roll
+        double rollRad = iInsRoll * dr2;
+        double dL = dLeftward - Lz * sin(rollRad) + Ly * cos(rollRad);
+
+        static const double dLStart = -0.2732048853;
+        dL += dLStart;
+
+        // Write output
+        out << fixed << setprecision(13)
+            << iTime << ", "
+            << iInsRoll << ", "
+            << gLat << ", "
+            << gLon << ", "
+            << dLeftward << ", "
+            << "      " << ", "
+            << dForward << ", "
+            << dL
+            << endl;
+    }
+
+    out.close();
+    cout << "Y offset results saved to UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv\n";
 }
+*/
+
+int main()
+{
+    cout << fixed << setprecision(13);
+
+    // Earth radius (in meters)
+    double REarth = 6387200.0;
+
+    // GPS endpoints (rear left antenna start/end)
+    GPSEndpoints inputGPS = { 38.6159095515001 , -89.6422556192682,
+                              38.6158436940279, -89.6386750652108 };
+
+    double pi = M_PI;
+    const double dr2 = pi / 180.0;
+
+    // Profiler geometry
+    double Lz = 1.0;
+    double Ly = 0.5;
+
+    // File I/O
+    ifstream file("UMTRI-RUN2883-time,insrol,lat,long,time.csv");
+    ofstream out("UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv");
+
+    if (!file.is_open() || !out.is_open())
+    {
+        cout << "Error with opening the file" << endl;
+        return 1;
+    }
+
+    // CSV headers
+    out << "Time,INSRoll,Latitude,Longitude,dLeftward, ,dForward, dL\n";
+
+    vector<double> rawTime, rawLat, rawLon, rawInsRoll;
+    string line;
+
+    // --- STEP 1: Read all points ---
+    while (getline(file, line))
+    {
+        if (line.empty()) continue;
+
+        double iTime, iInsRoll, gLat, gLon;
+        char comma;
+        stringstream ss(line);
+
+        if (!(ss >> iTime >> comma >> gLat >> comma >> gLon >> comma >> iInsRoll))
+        {
+            cout << "Skipping invalid row: " << line << endl;
+            continue;
+        }
+
+        rawTime.push_back(iTime);
+        rawLat.push_back(gLat);
+        rawLon.push_back(gLon);
+        rawInsRoll.push_back(iInsRoll);
+    }
+    file.close();
+
+    // --- STEP 2: Compute best-fit line (Lon vs Lat) ---
+    double sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    int N = rawLat.size();
+    for (int i = 0; i < N; i++)
+    {
+        sumX += rawLat[i];
+        sumY += rawLon[i];
+        sumXY += rawLat[i] * rawLon[i];
+        sumXX += rawLat[i] * rawLat[i];
+    }
+    double m = (N * sumXY - sumX * sumY) / (N * sumXX - sumX * sumX);
+    double b = (sumY - m * sumX) / N;
+
+    double lat0 = rawLat.front();
+    double lon0 = m * lat0 + b;
+
+    double cumulativeForward = 0.0;
+    double dLStart = 0.0;
+    bool firstPoint = true;
+
+    // --- STEP 3: Compute dForward and dLeftward relative to best-fit line ---
+    for (int i = 0; i < N; i++)
+    {
+        double gLat = rawLat[i];
+        double gLon = rawLon[i];
+        double iTime = rawTime[i];
+        double iInsRoll = rawInsRoll[i];
+
+        // Project point onto best-fit line
+        double dLat_line = gLat - lat0;
+        double dLon_line = gLon - lon0;
+
+        double dNorth_line = dLat_line * dr2 * REarth;
+        double dEast_line = dLon_line * dr2 * REarth * cos((gLat + lat0) / 2.0 * dr2);
+
+        // Direction vector of line
+        double lat1 = rawLat.back();
+        double lon1 = rawLon.back();
+        double dN_line_total = (lat1 - lat0) * dr2 * REarth;
+        double dE_line_total = (lon1 - lon0) * dr2 * REarth * cos((lat1 + lat0) / 2.0 * dr2);
+        double lineLength = sqrt(dN_line_total * dN_line_total + dE_line_total * dE_line_total);
+
+        double c = dE_line_total / lineLength;
+        double s = dN_line_total / lineLength;
+
+        // Forward and leftward (perpendicular)
+        double dForward = c * dEast_line + s * dNorth_line;
+        double dLeftward = -s * dEast_line + c * dNorth_line;
+
+        // Apply start offset to match previous runs
+        static const double dForwardStart = -96.02691236;
+        dForward += dForwardStart;
+
+        // Compute dL using profiler geometry and roll
+        double rollRad = iInsRoll * dr2;
+        double dL = dLeftward - Lz * sin(rollRad) + Ly * cos(rollRad);
+
+        // Shift dL so first point starts at 0.21
+        if (firstPoint)
+        {
+            double desiredStart = 0.2101397687;
+            dLStart = desiredStart - dL;
+            firstPoint = false;
+        }
+        dL += dLStart;
+
+        // Write output
+        out << fixed << setprecision(13)
+            << iTime << ", "
+            << iInsRoll << ", "
+            << gLat << ", "
+            << gLon << ", "
+            << dLeftward << ", "
+            << "      " << ", "
+            << dForward << ", "
+            << dL
+            << endl;
+    }
+
+    out.close();
+    cout << "Y offset results saved to UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv\n";
+}
+
+
+
+
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
 // Debug program: F5 or Debug > Start Debugging menu

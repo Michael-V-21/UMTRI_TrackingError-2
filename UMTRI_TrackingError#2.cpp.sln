@@ -5,7 +5,7 @@ VisualStudioVersion = 17.14.36518.9
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UMTRI_TrackingError#2.cpp", "UMTRI_TrackingError#2.cpp\UMTRI_TrackingError#2.cpp.vcxproj", "{D275792C-CF42-4AD4-99BE-5507EF989098}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PseudoCode", "PseudoCode", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 	ProjectSection(SolutionItems) = preProject
 		UMTRITrackingErrorPseudo.cpp = UMTRITrackingErrorPseudo.cpp
 	EndProjectSection
