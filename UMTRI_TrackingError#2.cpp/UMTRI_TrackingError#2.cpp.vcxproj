@@ -123,7 +123,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="UMTRI_TrackingError#2.cpp.cpp" />
+    <ClCompile Include="dL&amp;dF_RUN1.cpp" />
+    <ClCompile Include="dL&amp;dF_RUN2.cpp" />
+    <ClCompile Include="UMTRI_TrackingError#2.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="UMTRI-Run2883.csv" />
