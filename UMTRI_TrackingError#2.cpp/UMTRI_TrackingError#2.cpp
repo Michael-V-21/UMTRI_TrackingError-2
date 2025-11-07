@@ -1,11 +1,3 @@
-// UMTRI_TrackingError.cpp : This file contains the 'main' function. Program execution begins and ends there.
-
-//NOTE FOR MR : This is the section where the GPS measurements and the INS roll angle are used to compute tracking error.
-//NOTE FOR MR : GPSEndpoints.LatS and GPSEndpoints.LongS are the coordinates of the section starting point.
-//NOTE FOR MR : GPSEndpoints.LatE and GPSEndpoints.LongE are the coordinates of the section ending point.
-//NOTE FOR MR : GPSEndpoints.<> have to be provided by the user. (We measure those before we start our runs.)
-//Precomputed trig functions and constants.
-//NOTE FOR MR : REarth(Earth radius) is computed using Latitude.Use 6400000 m for now, and I'll provide a copy of the function.
 
 #define _USE_MATH_DEFINES
 #include <iostream>
@@ -89,39 +81,55 @@ struct INS
 };
 
 
-
 int main()
 {
     cout << fixed << setprecision(13);
 
-    // Earth radius (in meters)
+    // Earth radius: should use latitiude but use defined measurement for now.
     double REarth = 6387200.0;
 
-    // GPS endpoints (rear left antenna start/end)
-    GPSEndpoints inputGPS = { 38.6159095515001 , -89.6422556192682,
-                              38.6158436940279, -89.6386750652108 };
+    //GPSEndpoint user input (random numbers in this case for example and testing)
+    GPSEndpoints inputGPS = { 38.61590955 , -89.64225562, 38.61584369, -89.63867507 };
 
     double pi = M_PI;
     const double dr2 = pi / 180.0;
 
-    // Profiler geometry
-    double Lz = 1.0;
-    double Ly = 0.5;
 
+    double cl = cos(inputGPS.LatS * dr2);
+    //double cl = cos(((inputGPS.LatS + inputGPS.LatE) / 2.0) * dr2);
+
+    double dN = (inputGPS.LatE - inputGPS.LatS) * dr2 * REarth;
+    double dE = (inputGPS.LongE - inputGPS.LongS) * dr2 * REarth * cl;
+    double segmentLength = sqrt(dE * dE + dN * dN);
+    double c = dE / segmentLength;
+    double s = dN / segmentLength;
+
+    //double Lz = 1.0;
+    //double Ly = 0.5;
+
+    // Calculating Y (Leftward offset) using CSV file data, and exporting the data back to another file.
     ifstream file("UMTRI-RUN2883-time,insrol,lat,long,time.csv");
     ofstream out("UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv");
 
     if (!file.is_open() || !out.is_open())
     {
         cout << "Error with opening the file" << endl;
-        return 1;
     }
 
     // CSV headers
-    out << "Time,INSRoll,Latitude,Longitude,dLeftward, ,dForward, dL\n";
+    out << "Time,INSRoll,Latitude,Longitude,dLeftward, ,dForward, dL,  ,dNorth, dEast\n";
 
-    vector<double> rawTime, rawLat, rawLon, rawInsRoll;
     string line;
+    bool firstLine = true;
+
+    bool hasPrev = false;
+    double prevLat = 0.0;
+    double prevLong = 0.0;
+
+    vector<double> rawTime;
+    vector<double> rawLat;
+    vector<double> rawLon;
+    vector<double> rawInsRoll;
 
 
     while (getline(file, line))
@@ -130,88 +138,62 @@ int main()
 
         double iTime, iInsRoll, gLat, gLon;
         char comma;
+        string cell;
 
         stringstream ss(line);
-        if (!(ss >> iTime >> comma >> gLat >> comma >> gLon >> comma >> iInsRoll))
-        {
+
+        if (!(ss >> iTime >> comma >> gLat >> comma >> gLon >> comma >> iInsRoll )) {
             cout << "Skipping invalid row: " << line << endl;
             continue;
         }
 
-        rawTime.push_back(iTime);
-        rawLat.push_back(gLat);
-        rawLon.push_back(gLon);
-        rawInsRoll.push_back(iInsRoll);
-    }
-    file.close();
+        // Prints time, lat, long, roll to vs output terminal
+        /*
+        cout << "Row read -> Time: " << iTime
+            << "  Lat: " << gLat
+            << "  Lon: " << gLon
+            << "  Roll: " << iInsRoll << endl;
+        */
 
-    // best-fit line
-    double sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-    int N = rawLat.size();
-    for (int i = 0; i < N; i++)
-    {
-        sumX += rawLat[i];
-        sumY += rawLon[i];
-        sumXY += rawLat[i] * rawLon[i];
-        sumXX += rawLat[i] * rawLat[i];
-    }
-    double m = (N * sumXY - sumX * sumY) / (N * sumXX - sumX * sumX);
-    double b = (sumY - m * sumX) / N;
+        if (firstLine) {
+            cout << "First CSV Lat/Lon: " << gLat << ", " << gLon << endl;
+            firstLine = false;
+        }
 
-    double lat0 = rawLat.front();
-    double lon0 = m * lat0 + b;
+        //double cl_current = cos(gLat * dr2);
+        double dNorth = (gLat - inputGPS.LatS) * dr2 * REarth;
+        double dEast = (gLon - inputGPS.LongS) * dr2 * REarth * cl;
 
-    double cumulativeForward = 0.0;
-    double dLStart = 0.0;
-    bool firstPoint = true;
+        // Print dNorth and dEast to vs output terminal to check
+        //cout << "Computed -> dNorth: " << dNorth
+        //    << "  dEast: " << dEast << endl;
 
-    // dForward and dLeftward relative to best-fit line
-    for (int i = 0; i < N; i++)
-    {
-        double gLat = rawLat[i];
-        double gLon = rawLon[i];
-        double iTime = rawTime[i];
-        double iInsRoll = rawInsRoll[i];
+        double dLeftward = (-s * dEast) + (c * dNorth);
+        double dForward = c * dEast + s * dNorth;
 
-        // Project point onto best-fit line
-        double dLat_line = gLat - lat0;
-        double dLon_line = gLon - lon0;
-
-        double dNorth_line = dLat_line * dr2 * REarth;
-        double dEast_line = dLon_line * dr2 * REarth * cos((gLat + lat0) / 2.0 * dr2);
-
-        // Direction vector of line
-        double lat1 = rawLat.back();
-        double lon1 = rawLon.back();
-        double dN_line_total = (lat1 - lat0) * dr2 * REarth;
-        double dE_line_total = (lon1 - lon0) * dr2 * REarth * cos((lat1 + lat0) / 2.0 * dr2);
-        double lineLength = sqrt(dN_line_total * dN_line_total + dE_line_total * dE_line_total);
-
-        double c = dE_line_total / lineLength;
-        double s = dN_line_total / lineLength;
-
-
-        double dForward = c * dEast_line + s * dNorth_line;
-        double dLeftward = -s * dEast_line + c * dNorth_line;
-
-        // dForward distance offset
         static const double dForwardStart = -96.02691236;
         dForward += dForwardStart;
 
+        static const double dEastStart = -95.99508083;
+        dEast += dEastStart;
 
-        double rollRad = iInsRoll * dr2;
-        double dL = dLeftward - Lz * sin(rollRad) + Ly * cos(rollRad);
+        static const double dNorthStart = 2.491988945;
+        dNorth += dNorthStart;
 
-        // Shifted dL so first point starts at steve's first dL
-        if (firstPoint)
-        {
-            double desiredStart = 0.2101397687;
-            dLStart = desiredStart - dL;
-            firstPoint = false;
-        }
-        dL += dLStart;
+        static const double dLeftwardStart = 0.3124987224;
+        dLeftward += dLeftwardStart;
 
-        // Write output
+        // Profiler geometry
+        double Lz = -2.2;
+        double Ly = -0.1385;
+
+        double dL = dLeftward - Lz * sin(iInsRoll * dr2) + Ly * cos(iInsRoll * dr2);
+
+        //static const double dLStart = -0.5858722893;
+        //dL += dLStart;
+
+        //cout << " Lat: " << lat << " Lon: " << lon << "   |   Y (Leftward offset) : " << dLeftward << " meters \n";
+        //out << lat << ", " << lon << ", " << dLeftward << endl;
         out << fixed << setprecision(13)
             << iTime << ", "
             << iInsRoll << ", "
@@ -220,30 +202,18 @@ int main()
             << dLeftward << ", "
             << "      " << ", "
             << dForward << ", "
-            << dL
+            << dL << ", "
+            <<"       " << ", "
+            << dNorth << ", "
+            << dEast << ", "
             << endl;
+
+
     }
 
+
+    file.close();
     out.close();
-    cout << "Y offset results saved to UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv\n";
+    cout << "Y offset results saved to UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv \n";
+
 }
-
-
-
-
-
-
-
-
-
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file

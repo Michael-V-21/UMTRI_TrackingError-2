@@ -24,6 +24,9 @@
     <ClCompile Include="dL&amp;dF_RUN2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dL&amp;dF_BestFitLine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="UMTRI-Run2883.csv" />
