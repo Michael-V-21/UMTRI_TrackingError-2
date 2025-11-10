@@ -89,7 +89,8 @@ int main()
     double REarth = 6387200.0;
 
     //GPSEndpoint user input (random numbers in this case for example and testing)
-    GPSEndpoints inputGPS = { 38.61590955 , -89.64225562, 38.61584369, -89.63867507 };
+    //GPSEndpoints inputGPS = { 38.61590955 , -89.64225562, 38.61584369, -89.63867507 }; 
+    GPSEndpoints inputGPS = { 38.61588714 , -89.64115053, 38.61585436, -89.63930307};
 
     double pi = M_PI;
     const double dr2 = pi / 180.0;
@@ -103,9 +104,6 @@ int main()
     double segmentLength = sqrt(dE * dE + dN * dN);
     double c = dE / segmentLength;
     double s = dN / segmentLength;
-
-    //double Lz = 1.0;
-    //double Ly = 0.5;
 
     // Calculating Y (Leftward offset) using CSV file data, and exporting the data back to another file.
     ifstream file("UMTRI-RUN2883-time,insrol,lat,long,time.csv");
@@ -160,9 +158,11 @@ int main()
             firstLine = false;
         }
 
+        double cl_current = cos(gLat * dr2);
+
         //double cl_current = cos(gLat * dr2);
         double dNorth = (gLat - inputGPS.LatS) * dr2 * REarth;
-        double dEast = (gLon - inputGPS.LongS) * dr2 * REarth * cl;
+        double dEast = (gLon - inputGPS.LongS) * dr2 * REarth * cl_current;
 
         // Print dNorth and dEast to vs output terminal to check
         //cout << "Computed -> dNorth: " << dNorth
@@ -217,3 +217,4 @@ int main()
     cout << "Y offset results saved to UMTRI-Run2883-time,insrol,lat,long,time-YResults.csv \n";
 
 }
+
